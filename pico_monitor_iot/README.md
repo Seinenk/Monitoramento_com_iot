@@ -1,107 +1,79 @@
-Pico Monitor IoT (BitDogLab)
+# 📟 Pico Monitor IoT (BitDogLab)
 
-Status: Firmware pronto – Backend local em Flask em desenvolvimento
+![Status](https://img.shields.io/badge/status-completo-green) ![C](https://img.shields.io/badge/language-C-blue) ![Pico_SDK](https://img.shields.io/badge/Pico_SDK-%3E%3D1.5-orange)
 
-Este repositório contém o firmware C para a placa Raspberry Pi Pico W (BitDogLab) capaz de:
+## 🎯 Motivação
+Emular um fluxo completo em sistemas embarcados: ler sensores em um microcontrolador, transmitir via Wi-Fi e exibir em um servidor. Ideal para aprendizado de IoT ponta-a-ponta e prototipagem rápida.
 
-Função
+## 🚀 Funcionalidades Principais
+- **Wi-Fi STA**: conexão WPA2 (credenciais em `inc/wifi_opts.h`).  
+- **Heartbeat LED**: LED vermelho (GPIO 13) pisca a cada 1 s para sinalizar o laço ativo.  
+- **Leitura de Botões**: BTN1 (GPIO 22) & BTN2 (GPIO 21) → JSON `{ "btn1":0/1, "btn2":0/1 }`.  
+- **Leitura de Joystick**: ADC-0 (Y) & ADC-1 (X) → normalização (–1…+1) + rosa-dos-ventos (8 direções).  
+- **Sensor Extra (Temperatura)**: sensor interno ADC-4 → JSON `{ "temp": XX.XX }`.  
+- **Envio HTTP**: POST manual via LWIP TCP para rotas `/botoes`, `/joystick`, `/temp` (configurável em `inc/server_opts.h`).
 
-Detalhes
-
-Wi‑Fi STA
-
-Conexão WPA2 (credenciais em inc/wifi_opts.h)
-
-Heartbeat LED
-
-LED vermelho (GPIO 13) pisca a cada 1 s para indicar a execução do loop
-
-Leitura de Botões
-
-BTN1 (GPIO 22) & BTN2 (GPIO 21) – envia JSON { "btn1":0/1, "btn2":0/1 }
-
-Leitura de Joystick
-
-ADC‑0 (Y) & ADC‑1 (X) – envia posição normalizada e rosa‑dos‑ventos
-
-Temperatura interna
-
-Sensor on‑chip (ADC‑4) – envia JSON { "temp": XX.XX }
-
-POST HTTP
-
-Todos os dados são enviados a um servidor Flask definido em inc/server_opts.h
-
-📁 Estrutura do repositório
-
+## 📦 Estrutura de Pastas
+```text
 pico_monitor_iot/
-├── inc/ # Cabeçalhos de configuração
-│ ├── hw_config.h # Pinos, LED, etc.
-│ ├── wifi_opts.h # ⇦ Você cria aqui (SSID/Senha)
-│ └── server_opts.h # ⇦ Você cria aqui (IP/Porta)
-├── pico_monitor_iot.c # Firmware principal
-├── CMakeLists.txt # Build com pico‑sdk
-└── ...
-
-Um segundo diretório backend/ (fora desta pasta) conterá o servidor Flask – instruções mais abaixo.
-
-⚙️ Pré‑requisitos
-
-Pico SDK ≥ 1.5 (usamos 2.1.1) – consulte a documentação oficial
-
-Tool‑chain GCC ARM (ou VS Code + extensão Raspberry Pi Pico‑W)
-
-Python 3.10+ (para o backend Flask)
-
-🚀 Passo‑a‑passo para compilar o firmware
-
-Clone este repositório
-
-Crie inc/wifi_opts.h e inc/server_opts.h:
-
-// wifi_opts.h
-#define WIFI_SSID "MinhaRede"
-#define WIFI_PASSWORD "senha123"
-
-// server_opts.h
-#define SERVER_IP "192.168.0.100" // ou domínio na nuvem
-#define SERVER_PORT 5000 // porta do Flask
-
-Abra um terminal na pasta pico_monitor_iot:
-
+├── inc/                # Arquivos de configuração
+│   ├── hw_config.h     # Mapeamento de pinos, constantes gerais
+│   ├── wifi_opts.h     # SSID e senha (adicione em .gitignore)
+│   └── server_opts.h   # IP e porta do backend (local ou nuvem)
+├── pico_monitor_iot.c  # Firmware principal (loop, ADC, GPIO, JSON, HTTP)
+├── CMakeLists.txt      # Configuração do build via Pico SDK
+└── README.md           # Este documento
+```
+## ⚙️ Pré-requisitos
+- Pico SDK ≥ 1.5 (recomendado 1.5+ / 2.x)
+- Tool-chain ARM GCC `(arm-none-eabi-gcc)` ou VS Code + extensão Pico W
+- Python 3.10+ (somente para backend de testes local)
+- Rede Wi-Fi 2.4 GHz – Pico W e servidor devem estar na mesma sub-rede
+## 🔧 Configuração
+1. Crie `inc/wifi_opts.h:`
+```sh
+#define WIFI_SSID     "<SuaRedeWiFi>"
+#define WIFI_PASSWORD "<SuaSenha>"
+```
+2. Crie `inc/server_opts.h`:
+```sh
+#define SERVER_IP   "<IP_DO_SERVIDOR>"  // ex: "192.168.0.52" ou domínio
+#define SERVER_PORT 3000                // porta do backend
+```
+3. Ajustes opcionais:
+- Alterar pino do LED em `hw_config.h` (`LED_RED_PIN`).
+- Ajustar intervalo de envio mudando o temporizador de 1e6 µs no código.
+## 🛠️ Build & Flash
+```sh
+# 1. Crie diretório de build
 mkdir build && cd build
+
+# 2. Configure com CMake
 cmake ..
-ninja # ou make
 
-Coloque a Pico W em BOOTSEL mode, copie o pico_monitor_iot.uf2 gerado.
+# 3. Compile
+make          # ou ninja
 
-Abra o Serial Monitor (115200 Bd). Você deverá ver logs como:
-
-Wi‑Fi OK – IP 192.168.0.42
-JSON botões: { "btn1": 0, "btn2": 1 }
+# 4. Flash na Pico W
+#    - Coloque a placa em modo BOOTSEL
+#    - Copie o .uf2 gerado para a unidade
+```
+## 🔍 Verificação & Logs
+Abra o Serial Monitor (115200 Bd):
+```sh
+Wi-Fi OK – IP 192.168.0.52
+JSON botões: { "btn1": 1, "btn2": 0 }
 JSON joystick: { "x": 0.123, "y": -0.456, "rosa": "Nordeste" }
 JSON temperatura: { "temp": 29.87 }
-
-🌐 Backend Flask (próximo passo)
-
-Criaremos uma pasta irmã backend/ com app.py, requirements.txt e um index.html simples para visualizar os dados em tempo real. Quando pronta, bastará ajustar SERVER_IP/PORT.
-
-Observação: durante o desenvolvimento local, você pode usar o IP do computador (ou 10.0.0.x). Para deploy em nuvem, bastará apontar o hostname público e porta 80/443.
-
-🛠️ Personalização rápida
-
-LED: mude LED_RED_PIN em hw_config.h caso utilize outro pino/LED.
-
-Intervalo de envio: altere o timeout de 1e6 µs no main para qualquer valor.
-
-Sensores adicionais: basta criar uma função post\_<sensor>() seguindo o mesmo padrão.
-
-📋 Referências úteis
-
-Datasheet RP2040 – Sensor de temperatura §4.9
-
-lwIP API – tcp_write / tcp_recv
-
-Raspberry Pi Pico W &cyw43 driver examples
-
-MIT License — à vontade para usar/alterar.
+```
+## 🌐 Integração com Backend
+- Ajuste `SERVER_IP`/`SERVER_PORT` para apontar ao seu servidor (FastAPI, Flask ou similar).
+- O backend deve expor HTTP 204 No Content e WebSocket `/ws` para visualização em tempo real.
+## 🌟 Personalizações Rápidas
+- Novo sensor: crie `post_<sensor>()` seguindo o padrão existente.
+- Debounce: implemente amostragem múltipla em `buttons_get_json()`.
+- OTA: adicione rotina de atualização de firmware via HTTP/UF2.
+## 📖 Referências
+- Datasheet RP2040 – Sensor de temperatura §4.9
+- lwIP API – `tcp_new()`, `tcp_write()`, `tcp_recv()`
+- BitDogLab Examples – uso do driver CYW43
